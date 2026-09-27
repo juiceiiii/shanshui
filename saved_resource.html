@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<!-- saved from url=(0012)about:srcdoc -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+				
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<style>
+					body {
+						background-color: white; /* Ensure the iframe has a white background */
+					}
+				</style>
+				<script>
+					var Z_CDN_WHITELIST = [
+						'cdn.jsdelivr.net',
+						'cdnjs.cloudflare.com',
+						'cdn.tailwindcss.com',
+						'unpkg.com',
+						'fonts.googleapis.com',
+						'd3js.org',
+						'cdn.babylonjs.com',
+						'html2canvas.hertzen.com',
+						'code.jquery.com',
+						'cdn.datatables.net',
+						'kit.fontawesome.com',
+						'code.createjs.com',
+						'cdn.plot.ly',
+						'fonts.gstatic.com',
+						'www.rgraph.net',
+						'api.mapbox.com',
+						'polyfill.io',
+						'cdn.quilljs.com',
+						'picsum.photos',
+						'esm.sh'
+					];
+
+					function z_isUrlInWhitelist(url) {
+						if (!url || typeof url !== 'string') {
+							return false;
+						}
+						try {
+							const urlObj = new URL(url);
+							const hostname = urlObj.hostname;
+							return Z_CDN_WHITELIST.some(domain => hostname === domain);
+						} catch (e) {
+							return false;
+						}
+					}
+
+						function z_proxyCdnUrl(url) {
+						if (!url || !url.startsWith('http')) {
+							return url;
+						}
+							if (!z_isUrlInWhitelist(url)) {
+							return url;
+						}
+						if (!url.startsWith('https://artifacts-cdn.chatglm.site/')) {
+							return 'https://artifacts-cdn.chatglm.site/' + url;
+						}
+						return url;
+					}
+					
+					// 增强版外部链接拦截 - 适合放在模板字符串中
+					document.addEventListener('click', function (ev) {
+						try {
+							const anchor = ev.target?.closest?.('a[href]') || null;
+							if (!anchor) return;
+
+							let href = anchor.getAttribute('href')?.trim() || '';
+							if (!href) return;
+
+							if (href.startsWith('javascript:')) return;
+
+							// 新需求：href="#" 的链接完全阻止跳转和任何行为
+							if (href === '#') {
+								ev.preventDefault();
+								return;
+							}
+
+							// 处理其他内部锚点（如 #about、#contact 等）
+							if (href.startsWith('#')) {
+								const rawId = href.slice(1);
+								if (!rawId) return;
+
+								const id = decodeURIComponent(rawId);
+								const target = 
+									document.getElementById(id) ||
+									document.querySelector('a[name="' + id.replace(/"/g, '\"') + '"]') ||
+									document.querySelector('[name="' + id.replace(/"/g, '\"') + '"]');
+
+								if (target && target.scrollIntoView) {
+									ev.preventDefault();
+									try {
+										history.pushState(null, '', href);
+									} catch (e) {}
+									target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+								}
+								return;
+							}
+
+							// 处理外部链接
+							let url;
+							try {
+								url = new URL(href, window.location.href);
+							} catch (e) {
+								return;
+							}
+
+							if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+							const isExternal = url.hostname !== window.location.hostname;
+
+							if (isExternal || anchor.getAttribute('target') === '_blank') {
+								ev.preventDefault();
+								window.open(url.toString(), '_blank', 'noopener,noreferrer');
+							}
+
+						} catch (e) {
+							// 出错时不阻止默认行为
+						}
+					}, true);
+
+					// 1. 暴力清除函数：从 DOM 层面抹除 onclick 属性
+					var Z_removeInlineOnclick = function () {
+						// 专门锁定 href="#" 且带有 onclick 的 a 标签
+						const targetedLinks = document.querySelectorAll('a[href="#"][onclick]');
+						for (let i = 0; i < targetedLinks.length; i++) {
+							targetedLinks[i].removeAttribute('onclick');
+							targetedLinks[i].onclick = null; // 确保 JS 层的赋值也被清理
+						}
+					};
+					// 3. 动态监测：防止页面通过异步加载重新生成带 onclick 的元素
+					var z_observer = new MutationObserver(function () {
+						Z_removeInlineOnclick();
+					});
+
+					z_observer.observe(document.documentElement, {
+						childList: true,
+						subtree: true,
+						attributes: true,
+						attributeFilter: ['onclick']
+					});
+
+					// 4. 初始化执行一次
+					Z_removeInlineOnclick();
+
+					const Z_rawCreateElement = document.createElement;
+
+					document.createElement = function (tagName, ...args) {
+						const el = Z_rawCreateElement.call(this, tagName, ...args);
+
+						if (tagName.toLowerCase() === 'script') {
+							const rawSetAttribute = el.setAttribute;
+							const rawGetAttribute = el.getAttribute;
+							let srcValue = '';
+							
+							el.setAttribute = function (name, value) {
+								if (name === 'src' && typeof value === 'string') {
+									value = z_proxyCdnUrl(value);
+									srcValue = value;
+								}
+								return rawSetAttribute.call(this, name, value);
+							};
+
+							Object.defineProperty(el, 'src', {
+								get: function() {
+									return srcValue || rawGetAttribute.call(this, 'src') || '';
+								},
+								set: function(value) {
+									if (typeof value === 'string') {
+										srcValue = z_proxyCdnUrl(value);
+										rawSetAttribute.call(this, 'src', srcValue);
+									} else {
+										srcValue = value;
+									}
+								},
+								configurable: true,
+								enumerable: true
+							});
+						}
+
+						if (tagName.toLowerCase() === 'link') {
+							const rawSetAttribute = el.setAttribute;
+							const rawGetAttribute = el.getAttribute;
+							let hrefValue = '';
+							
+							el.setAttribute = function (name, value) {
+								if (name === 'href' && typeof value === 'string') {
+									value = z_proxyCdnUrl(value);
+									hrefValue = value;
+								}
+								return rawSetAttribute.call(this, name, value);
+							};
+
+							Object.defineProperty(el, 'href', {
+								get: function() {
+									return hrefValue || rawGetAttribute.call(this, 'href') || '';
+								},
+								set: function(value) {
+									if (typeof value === 'string') {
+										hrefValue = z_proxyCdnUrl(value);
+										rawSetAttribute.call(this, 'href', hrefValue);
+									} else {
+										hrefValue = value;
+									}
+								},
+								configurable: true,
+								enumerable: true
+							});
+						}
+
+						return el;
+					};
+
+					const Z_OriginalXMLHttpRequest = window.XMLHttpRequest;
+					window.XMLHttpRequest = function (...args) {
+						const xhr = new Z_OriginalXMLHttpRequest(...args);
+						const rawOpen = xhr.open;
+
+						xhr.open = function (method, url, ...rest) {
+							if (typeof url === 'string') {
+								const methodUpper = (method || '').toUpperCase();
+								if (methodUpper === 'GET' && z_isUrlInWhitelist(url)) {
+									url = z_proxyCdnUrl(url);
+								}
+							}
+							return rawOpen.call(this, method, url, ...rest);
+						};
+
+						return xhr;
+					};
+
+					window.XMLHttpRequest.prototype = Z_OriginalXMLHttpRequest.prototype;
+					Object.setPrototypeOf(window.XMLHttpRequest, Z_OriginalXMLHttpRequest);
+
+					const z_originalFetch = window.fetch;
+					window.fetch = async function (...args) {
+						if (args.length > 0) {
+							let url = '';
+							let method = 'GET';
+							
+							if (typeof args[0] === 'string') {
+								url = args[0];
+								if (args[1] && args[1].method) {
+									method = args[1].method.toUpperCase();
+								}
+								if (method === 'GET' && z_isUrlInWhitelist(url)) {
+									args[0] = z_proxyCdnUrl(url);
+								}
+							} else if (args[0] instanceof Request) {
+								const originalUrl = args[0].url;
+								method = (args[0].method || 'GET').toUpperCase();
+								if (method === 'GET' && z_isUrlInWhitelist(originalUrl)) {
+									const proxiedUrl = z_proxyCdnUrl(originalUrl);
+									if (proxiedUrl !== originalUrl) {
+										args[0] = new Request(proxiedUrl, args[0]);
+									}
+								}
+							}
+						}
+						return z_originalFetch.apply(this, args);
+					};
+				</script>
+			<script src="https://registry.npmmirror.com/mqtt/5.10.1/files/dist/mqtt.min.js"></script></head>
+			<body>
+				
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>山川之美 · 单元复盘｜回望来路 · 照亮成片</title>
+<link rel="preconnect" href="https://artifacts-cdn.chatglm.site/https://fonts.googleapis.com">
+<link rel="preconnect" href="https://artifacts-cdn.chatglm.site/https://fonts.gstatic.com" crossorigin="">
+<link href="https://artifacts-cdn.chatglm.site/https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;family=Noto+Serif+SC:wght@600;700;900&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#8E2B22; --red2:#A63A2B; --deep:#5E1B15;
+  --paper:#F5EFE1; --card:#FFFDF7; --wash:#F1E7D2;
+  --ink:#37332C; --soft:#7A7264; --gold:#B98F45; --line:#E3D7BC;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  color:var(--ink); line-height:1.7;
+  background:radial-gradient(1100px 500px at 85% -5%, rgba(158,43,34,.06), transparent 60%), var(--paper);
+}
+.serif{font-family:'Noto Serif SC','Songti SC','SimSun',serif}
+
+/* ===== 头图 ===== */
+.hero{background:linear-gradient(180deg,#6E1F19,#93302500), linear-gradient(180deg,#7E241C,#9E3226);color:#F8EFDB;text-align:center;padding:54px 20px 0;overflow:hidden}
+.eyebrow{font-size:12.5px;letter-spacing:.32em;opacity:.85;margin-bottom:16px}
+.hero h1{font-family:'Noto Serif SC',serif;font-weight:900;font-size:clamp(30px,5.4vw,46px);letter-spacing:.14em}
+.hero .sub{font-size:15px;opacity:.92;margin-top:12px;letter-spacing:.1em}
+.quote{max-width:760px;margin:26px auto 0;padding:14px 22px;border:1px solid rgba(248,239,219,.4);border-radius:10px;background:rgba(0,0,0,.14);font-size:14.5px;line-height:2}
+.quote b{color:#EBCE8E;letter-spacing:.15em}
+.chain{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:6px;margin:24px auto 0;max-width:980px}
+.node{background:rgba(248,239,219,.12);border:1px solid rgba(248,239,219,.35);color:#F8EFDB;padding:7px 13px;border-radius:8px;font-family:'Noto Serif SC',serif;font-weight:700;font-size:15px;letter-spacing:.08em;line-height:1.3}
+.node small{display:block;font-family:'Noto Sans SC',sans-serif;font-weight:400;font-size:10.5px;opacity:.78;letter-spacing:.05em}
+.node.done{background:rgba(248,239,219,.92);color:#7E241C}
+.node.cur{background:#D9A441;color:#3A2A12;border-color:#D9A441;animation:pulse 2.4s infinite}
+.node.todo{opacity:.55;border-style:dashed}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,164,65,.55)}70%{box-shadow:0 0 0 9px rgba(217,164,65,0)}100%{box-shadow:0 0 0 0 rgba(217,164,65,0)}}
+.arr{align-self:center;color:rgba(248,239,219,.5);font-size:12px}
+.mountains{display:block;width:100%;margin-top:30px}
+
+/* ===== 顶栏 ===== */
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:12px 22px;background:rgba(247,241,228,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(90,60,30,.06)}
+.brand{font-family:'Noto Serif SC',serif;font-weight:700;color:var(--red);letter-spacing:.06em;font-size:15px}
+.topnav{display:flex;gap:9px;margin-left:auto}
+.topnav button{
+  font-family:inherit;font-size:15px;font-weight:600;letter-spacing:.05em;
+  color:var(--red2);background:#FFFDF7;border:1.5px solid var(--red);
+  padding:9px 20px;border-radius:999px;cursor:pointer;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(94,27,21,.12);transition:all .15s;
+}
+.topnav button:hover{background:var(--red);color:#FBF3DF;transform:translateY(-2px);box-shadow:0 4px 12px rgba(94,27,21,.28)}
+.topnav button:active{transform:translateY(0);box-shadow:0 1px 4px rgba(94,27,21,.2)}
+@media (max-width:1080px){.brand{display:none}}
+@media (max-width:760px){.topnav{display:none}}
+
+/* ===== 版块通用 ===== */
+main{padding-bottom:70px}
+section{max-width:1060px;margin:0 auto;padding:56px 20px 0;scroll-margin-top:84px}
+.sec-head{display:flex;align-items:baseline;gap:12px}
+.sec-num{font-family:'Noto Serif SC',serif;font-size:40px;line-height:1;color:rgba(158,43,34,.85)}
+.sec-head h2{font-family:'Noto Serif SC',serif;font-size:24px;letter-spacing:.14em;color:var(--ink)}
+.sec-desc{color:var(--soft);font-size:14.5px;margin:10px 0 22px}
+.sec-desc b{color:var(--red)}
+.sub-head{display:flex;align-items:baseline;gap:10px;margin:34px 0 14px;font-family:'Noto Serif SC',serif;font-size:18.5px;color:var(--ink)}
+.sh-num{color:var(--red);font-size:15px}
+.sh-note{font-family:'Noto Sans SC',sans-serif;font-weight:400;font-size:12px;color:var(--soft)}
+
+/* ===== 回望卡片 ===== */
+.task-card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.task-card.now{border:1.5px solid var(--red)}
+.task-head{display:flex;align-items:center;gap:14px;padding:15px 18px 12px;text-align:left}
+.th-txt{flex:1;min-width:0}
+.th-txt strong{font-family:'Noto Serif SC',serif;font-size:17px;display:block}
+.th-txt em{font-style:normal;font-size:12.5px;color:var(--soft);display:block;margin-top:3px}
+.th-txt i{font-style:normal;font-size:12.5px;color:#8A7B5C;display:block;margin-top:2px}
+.seal{flex:0 0 auto;width:46px;height:46px;border-radius:8px;background:linear-gradient(145deg,#A93226,#7E2119);color:#FBF1DC;font-family:'Noto Serif SC',serif;font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:2px 3px 0 rgba(94,27,21,.25);transform:rotate(-4deg)}
+.seal.ghost{background:transparent;border:2px dashed rgba(158,43,34,.6);color:var(--red);box-shadow:none}
+.seal.sm{width:36px;height:36px;font-size:17px;border-radius:7px}
+.seal.xs{width:24px;height:24px;font-size:12.5px;border-radius:5px;box-shadow:none;transform:none}
+.tag-now{display:inline-block;margin-left:10px;background:var(--gold);color:#3A2A12;font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:11px;padding:2px 8px;border-radius:999px;letter-spacing:.08em;vertical-align:2px}
+.task-body{display:block;padding:0 20px 20px 20px}
+.task-body h4{font-family:'Noto Serif SC',serif;font-size:14px;letter-spacing:.22em;color:var(--red);margin:2px 0 9px;padding-top:10px;border-top:1px dashed var(--line)}
+.learned{margin-left:1.2em;font-size:14px}
+.learned li{margin:6px 0}
+.learned li::marker{color:var(--red)}
+
+/* ===== 迁移（选择题） ===== */
+.poll-live{display:flex;flex-direction:column;gap:9px;background:var(--wash);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:6px}
+.pl-label{font-size:13.5px;font-weight:600;letter-spacing:.14em;color:var(--soft)}
+.pl-main{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pl-main input{width:130px;padding:8px 10px;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.btn-sm{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;border:1px solid var(--red);background:var(--red);color:#FBF3DF;font-size:13.5px;cursor:pointer;letter-spacing:.04em;font-family:inherit;white-space:nowrap}
+.btn-sm:hover{background:var(--deep)}
+.conn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--soft)}
+.dot{width:9px;height:9px;border-radius:50%;background:#B9AE96;display:inline-block;flex:0 0 auto}
+.dot.wait{background:#D9A441;animation:blink 1.1s infinite}
+.dot.on{background:#4A6B4F;box-shadow:0 0 6px rgba(74,107,79,.55)}
+@keyframes blink{50%{opacity:.35}}
+
+.sv-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(90,60,30,.04)}
+.sv-head{display:flex;align-items:center;gap:12px}
+.sv-tt h3{font-family:'Noto Serif SC',serif;font-size:16.5px}
+.sv-tt em{font-style:normal;font-size:12.5px;color:var(--soft);display:block}
+.q{font-size:13px;color:var(--soft);margin:13px 0 8px;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 13px;font-size:13px;color:var(--ink);cursor:pointer;font-family:inherit;transition:all .15s}
+.chip:hover{border-color:var(--red);color:var(--red)}
+.chip.on{background:linear-gradient(145deg,#A93226,#8E2B22);color:#FBF3DF;border-color:var(--red)}
+input[type=text]{width:100%;border:1px solid var(--line);border-radius:10px;background:#FFFEFA;padding:10px 12px;font:inherit;font-size:14px;color:var(--ink)}
+input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(158,43,34,.12)}
+.other-row{display:none;align-items:center;gap:10px;margin-top:10px}
+.other-row label{flex:0 0 auto;font-size:13px;color:var(--red);font-weight:600;white-space:nowrap}
+
+/* 班级汇总 */
+.lb{background:linear-gradient(135deg,#FBF6E9,#F5EBD3);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-top:20px}
+.lb h4{font-family:'Noto Serif SC',serif;font-size:15.5px;color:var(--red);letter-spacing:.06em;margin-bottom:9px}
+.as-head{font-size:12.5px;color:var(--soft);margin-bottom:4px}
+.as-row{padding:9px 0;border-top:1px dashed #D8C9A6;font-size:13px}
+.as-row:first-of-type{border-top:0}
+.as-row b{font-family:'Noto Serif SC',serif;color:var(--red)}
+.as-row div{color:#5A4A33;margin-top:2px}
+.as-row .lab{color:var(--soft)}
+.as-empty{font-size:13px;color:#A79B83;padding:6px 0}
+
+/* ===== 互评 ===== */
+.conn-line{font-size:12.5px;color:var(--soft);margin:-12px 0 16px}
+.conn-line b{color:var(--red)}
+
+/* ===== 量表 ===== */
+.tbl-cap{display:flex;align-items:center;gap:10px;margin:24px 0 8px}
+.tbl-cap:first-of-type{margin-top:4px}
+.wk-tag{flex:0 0 auto;background:linear-gradient(145deg,#A93226,#7E2119);color:#FBF1DC;font-size:13px;padding:4px 14px;border-radius:8px;letter-spacing:.14em;font-family:'Noto Serif SC',serif;font-weight:700}
+.tbl-cap em{font-style:normal;font-size:12px;color:#A79B83}
+.tbl-total{margin-left:auto;background:rgba(158,43,34,.08);border:1px solid rgba(158,43,34,.25);color:var(--red);font-size:12.5px;padding:3px 11px;border-radius:999px;white-space:nowrap;font-weight:600}
+.tbl-wrap{overflow-x:auto;border-radius:10px;box-shadow:0 2px 8px rgba(90,60,30,.05);background:var(--card)}
+table.rub{width:100%;min-width:680px;border-collapse:collapse;background:var(--card);font-size:13.5px}
+table.rub th,table.rub td{border:1px solid var(--line);padding:10px 12px;vertical-align:middle;text-align:left}
+table.rub thead th{background:linear-gradient(135deg,#EFE2C4,#EADCB9);font-family:'Noto Serif SC',serif;font-size:13.5px;letter-spacing:.08em;color:var(--deep);white-space:nowrap}
+table.rub .d-name{white-space:nowrap;font-family:'Noto Serif SC',serif;font-weight:700;font-size:14.5px;background:#FCF8EE}
+table.rub .d-name::before{content:'◆ ';color:var(--red);font-size:11px}
+table.rub .d-std{color:var(--soft);font-size:12.5px;line-height:1.65}
+.d-score{text-align:center}
+.rb-stars{display:flex;gap:4px;font-size:21px;line-height:1;justify-content:center}
+.rb-star{cursor:pointer;color:#D8C9A6;user-select:none;transition:transform .12s,color .12s}
+.rb-star:hover{transform:scale(1.2)}
+.rb-star.on{color:#D9A441;text-shadow:0 1px 3px rgba(185,143,69,.45)}
+.wd-avg{display:inline-block;margin-top:6px;font-size:11px;color:var(--red);background:rgba(158,43,34,.07);border:1px solid rgba(158,43,34,.2);padding:1px 9px;border-radius:999px;white-space:nowrap}
+.d-note input{min-width:170px;font-size:13px;padding:8px 10px}
+tr.row-total td{background:#FBF3DF;font-weight:700;color:var(--deep)}
+tr.row-total .num{font-family:'Noto Serif SC',serif;font-size:17px;color:var(--red)}
+tr.row-avg td{background:#F3ECDA;color:#5A4A33}
+tr.row-avg .num{font-family:'Noto Serif SC',serif;font-size:15px;color:var(--red);font-weight:700}
+tr.row-avg .cnt{font-size:12px;color:var(--soft);font-weight:400;margin-left:6px}
+
+/* 汇总一览 */
+.lb-chips{display:flex;flex-wrap:wrap;gap:10px}
+.lb-chip{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.lb-chip b{font-family:'Noto Serif SC',serif;font-size:16px;color:var(--red)}
+.lb-chip small{color:var(--soft);font-size:12px}
+.lb-chip.none{color:#A79B83}
+
+/* ===== 页脚 / 其他 ===== */
+footer{background:#2E2A24;color:#BDB29C;padding:26px 20px;text-align:center;font-size:13px;line-height:2;margin-top:60px}
+footer b{color:#E8DCC0}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.3s;background:#37332C;color:#F7EFDC;padding:10px 18px;border-radius:8px;z-index:99;pointer-events:none;font-size:13.5px;max-width:86vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:720px){
+  .node{padding:6px 10px;font-size:13.5px}
+  .node small{display:none}
+  .tbl-total{display:none}
+}
+@media print{
+  body{background:#fff}
+  .hero,.topbar,footer,.no-print{display:none!important}
+  section{padding:0;max-width:none}
+  .tbl-wrap{box-shadow:none}
+}
+</style>
+
+
+
+<header class="hero">
+  <p class="eyebrow">部编版八年级语文上册 · 第三单元「山川之美」｜ 任务七【悟】· 开课复盘</p>
+  <h1>回望来路 · 照亮成片</h1>
+  <p class="sub">单元复盘 —— 每节课学了什么 · 我把它用在了哪里</p>
+  <div class="quote"><b>核心问题 ·</b> 古人如何用山水表达自己的心灵？我们今天又能如何"看见"并"再现"山水之美？</div>
+  <div class="chain" aria-label="单元进阶链">
+    <span class="node done">入项<small>发布任务</small></span><span class="arr">▸</span>
+    <span class="node done">言<small>《三峡》</small></span><span class="arr">▸</span>
+    <span class="node done">景<small>两封书信</small></span><span class="arr">▸</span>
+    <span class="node done">情<small>记承天寺</small></span><span class="arr">▸</span>
+    <span class="node done">境<small>渡荆门·黄鹤楼</small></span><span class="arr">▸</span>
+    <span class="node done">志<small>唐诗三首</small></span><span class="arr">▸</span>
+    <span class="node done">做<small>AI 成片</small></span><span class="arr">▸</span>
+    <span class="node cur">悟<small>本课 · 复盘</small></span><span class="arr">▸</span>
+    <span class="node todo">写<small>景物写作</small></span>
+  </div>
+  <svg class="mountains" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,160 L0,110 L70,60 L130,100 L210,45 L290,105 L380,70 L450,115 L540,55 L620,100 L700,75 L790,120 L880,60 L960,105 L1040,80 L1120,118 L1210,65 L1290,110 L1370,85 L1440,115 L1440,160 Z" fill="rgba(250,243,227,.14)"></path>
+    <path d="M0,160 L0,135 L90,95 L170,130 L260,88 L350,135 L440,100 L540,138 L640,92 L740,132 L840,98 L940,136 L1040,95 L1140,133 L1250,100 L1350,135 L1440,110 L1440,160 Z" fill="rgba(250,243,227,.20)"></path>
+    <path d="M0,160 L0,148 C240,128 480,152 720,140 C960,128 1200,152 1440,138 L1440,160 Z" fill="rgba(250,243,227,.30)"></path>
+  </svg>
+</header>
+
+<div class="topbar no-print">
+  <span class="brand">◎ 山川之美 · 单元复盘</span>
+  <nav class="topnav">
+    <button type="button" data-target="sec-recap">壹 · 回望</button>
+    <button type="button" data-target="sec-survey">贰 · 迁移</button>
+    <button type="button" data-target="sec-poll">叁 · 互评</button>
+  </nav>
+</div>
+
+<main>
+  <section id="sec-recap">
+    <div class="sec-head"><span class="sec-num serif">壹</span><h2>回望</h2></div>
+    <div id="recapWrap"><article class="task-card">
+    <div class="task-head">
+      <span class="seal ghost">启</span>
+      <div class="th-txt">
+        <strong>任务〇 · 入项｜发布真任务</strong>
+        <em>「课本里的中国 · 山水篇」AI 创作短视频参展 ｜ 冯绮华 · 0.5 课时</em>
+        <i>先知道"做什么、做到什么算好、什么时候交"</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>发布真实任务：为六篇山水诗文之一制作"真人朗诵 + AI 画面"短视频，投稿人教社展示活动</li><li>解读评审四维：朗诵表达 · 画面创作 · 技术参数 · 文化底蕴</li><li>拆解完成作品的工作流，形成个人任务卡</li></ul>
+    </div>
+  </article><article class="task-card">
+    <div class="task-head">
+      <span class="seal">言</span>
+      <div class="th-txt">
+        <strong>任务一 · 言｜声音里的《三峡》</strong>
+        <em>郦道元《三峡》（《水经注》） ｜ 冯绮华 · 2 课时</em>
+        <i>文言的地基：读懂手法，才能读出味道</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>疏通文意、积累实词：阙、溯、湍、巘、属引……</li><li>写景手法：正面＋侧面烘托、视角变换（俯视仰视）、动静结合、感官运用</li><li>朗诵标注四符号：∕ 停顿、· 重音、～ 延长、（）轻读</li><li>手法与声音对应：山之高峻要"压、沉"，水之奔涌要读快，静处放慢放轻</li></ul>
+    </div>
+  </article><article class="task-card">
+    <div class="task-head">
+      <span class="seal">景</span>
+      <div class="th-txt">
+        <strong>任务二 · 景｜山水入信 · 词画相生</strong>
+        <em>《答谢中书书》《与朱元思书》 ｜ 张秀丽 · 2 课时</em>
+        <i>读出来的山水 → 画出来的山水 → 定调的山水</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>寻言·辨骈韵：四六句式、对偶工整、声律和谐、辞藻凝练</li><li>赏景·选意象：列出意象清单，用"意象＋特点＋手法＋画面"四要素批注写景句</li><li>辨图·找不同：AI 图与原文比对，体会"画面必须忠实于文字"，防止以图代读</li><li>悟情·定色调：两信同在热爱自然、寄情山水；陶弘景归隐得意（明净温润·暖），吴均失意退隐（清冷峻拔·冷）</li></ul>
+    </div>
+  </article><article class="task-card">
+    <div class="task-head">
+      <span class="seal">情</span>
+      <div class="th-txt">
+        <strong>任务三 · 情｜月色里的"闲人"</strong>
+        <em>苏轼《记承天寺夜游》 ｜ 苏婷 · 2 课时</em>
+        <i>镜头雕琢 · 时空对话 · 声情共情——从"读懂文章"到"读懂文人"</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>行文脉络：叙事—写景—抒情，85 字三层推进</li><li>镜头雕琢：精准对标原文字句，用镜头类型（全景/中景/近景）与光影色调（柔光/硬光、冷/暖）读懂"一切景语皆情语"</li><li>时空对话：访谈 AI 苏轼与张怀民，解码"闲人"三重内涵——清闲是处境，闲适是心境，闲愁是底色，旷达是格局</li><li>声情共情：用朗读符号（/ ∥ △ · ▲ ⌒）标注诵读，AI 五维测评后调整再读</li></ul>
+    </div>
+  </article><article class="task-card">
+    <div class="task-head">
+      <span class="seal">境</span>
+      <div class="th-txt">
+        <strong>任务四 · 境｜把"境"界画出来</strong>
+        <em>《渡荆门送别》《黄鹤楼》 ｜ 刘广江 · 1 课时</em>
+        <i>空间导演训练营：看见空间 · 删字擂台 · 撰写分镜稿</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>看见空间：两诗同写"远望"而境不同——李白壮阔（由窄而阔），崔颢苍茫（由阔而窄）</li><li>取景与层次：远／近／俯／仰、推展——"山随平野尽，江入大荒流"是镜头的推移</li><li>删字擂台：删"随""入"或改"江水向东流"，AI 生成两组图对比——动词撑起了空间</li><li>三层时空电梯：《黄鹤楼》"昔人→千载→日暮"，时间与远近交织，"境"承载情感</li><li>撰写分镜稿：不少于 4 个镜头、不少于 3 种景别，每个镜头写明"为什么这样拍"</li></ul>
+    </div>
+  </article><article class="task-card">
+    <div class="task-head">
+      <span class="seal">志</span>
+      <div class="th-txt">
+        <strong>任务五 · 志｜山水深处见心志</strong>
+        <em>《钱塘湖春行》《野望》《使至塞上》 ｜ 滕蕾蕾 · 1 课时</em>
+        <i>读诗识人 · 阐释定调——同写山水，情怀各异</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>读诗路径：知人—明事—绘景—炼字—识人—论世，填写"诗人心志档案"</li><li>读诗识人：三诗对照诵读（春湖·秋原·大漠意境图），概括画面风格（明丽／萧瑟／苍茫），炼字换字比较见妙处</li><li>三种心志：王绩隐逸（孤独而主动）、王维旷达（开阔）、白居易闲适（欢悦）——"同写山水，情怀各异"</li><li>文化底蕴阐释（不少于 150 字）：定篇—知人—明事—绘景—炼字—识人—论世七步范式</li><li>视觉风格定调：风格（明丽/萧瑟/苍茫/清润/壮阔）＋景别＋色调＋光影，写出可直接发给 AI 的生图提示语母句</li></ul>
+    </div>
+  </article><article class="task-card">
+    <div class="task-head">
+      <span class="seal">做</span>
+      <div class="th-txt">
+        <strong>任务六 · 做｜从想法到成片</strong>
+        <em>六选一 ＋ AI 生图 / 录音 / 合成 ｜ 冯绮华 · 2-3 课时</em>
+        <i>从想法到成片的技术流水线</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>定选文：100 字选题理由——为什么是这一篇</li><li>AI 提示词写法与分镜稿</li><li>朗诵录音要点；音画合成与导出（MP4 · ≥1080P · 16:9 · ≤200MB）</li></ul>
+    </div>
+  </article><article class="task-card now">
+    <div class="task-head">
+      <span class="seal">悟</span>
+      <div class="th-txt">
+        <strong>任务七 · 悟｜成片收官 + 反思复盘<span class="tag-now">本课 · 我们在这里</span></strong>
+        <em>对照量规互评 · 提炼《写景方法清单》 · 回归大概念 ｜ 李好好 · 1 课时</em>
+        <i>把"做过"变成"带走"</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned"><li>成片收官：对照四维量规互评，说出差距与修改意见</li><li>提炼可迁移的《写景方法清单》</li><li>回归大概念：以审美的眼光观照自然，以恰当的方法再现风景</li></ul>
+    </div>
+  </article></div>
+  </section>
+
+  <section id="sec-survey">
+    <div class="sec-head"><span class="sec-num serif">贰</span><h2>迁移</h2></div>
+
+    <div class="poll-live no-print">
+      <div class="pl-label">班级码</div>
+      <div class="pl-main">
+        <input id="inCode" type="text" placeholder="如：A1" maxlength="12">
+        <button id="btnConnect" class="btn-sm" type="button">班级共享</button>
+        <span class="conn"><i id="connDot" class="dot"></i><span id="connText">未连接 · 仅本机</span></span>
+      </div>
+    </div>
+
+    <div id="surveyList">
+    <div class="sv-card" data-id="t_yan">
+      <div class="sv-head">
+        <span class="seal sm">言</span>
+        <div class="sv-tt"><h3>任务一 · 言｜声音里的《三峡》</h3><em>郦道元《三峡》（《水经注》）</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        <button type="button" class="chip" data-c="停连与节奏">停连与节奏</button><button type="button" class="chip" data-c="重音处理">重音处理</button><button type="button" class="chip" data-c="延长与轻读">延长与轻读</button><button type="button" class="chip" data-c="手法→声音对应">手法→声音对应</button><button type="button" class="chip" data-c="字音与句读">字音与句读</button>
+        <button type="button" class="chip" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:none">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        <button type="button" class="chip" data-c="朗诵的声音处理">朗诵的声音处理</button><button type="button" class="chip" data-c="画面构图与意象">画面构图与意象</button><button type="button" class="chip" data-c="色彩 / 光影 / 色调">色彩 / 光影 / 色调</button><button type="button" class="chip" data-c="分镜的远近层次">分镜的远近层次</button><button type="button" class="chip" data-c="整体风格与配乐">整体风格与配乐</button><button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="其它">其它</button>
+      </div>
+      <div class="other-row" data-row="q2" style="display:none">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="">
+      </div>
+    </div>
+    <div class="sv-card" data-id="t_jing">
+      <div class="sv-head">
+        <span class="seal sm">景</span>
+        <div class="sv-tt"><h3>任务二 · 景｜山水入信 · 词画相生</h3><em>《答谢中书书》《与朱元思书》</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        <button type="button" class="chip" data-c="意象清单">意象清单</button><button type="button" class="chip" data-c="四要素批注">四要素批注</button><button type="button" class="chip" data-c="写景手法">写景手法</button><button type="button" class="chip" data-c="辨图找不同">辨图找不同</button><button type="button" class="chip" data-c="画面定色调">画面定色调</button><button type="button" class="chip" data-c="骈文对偶">骈文对偶</button>
+        <button type="button" class="chip" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:none">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        <button type="button" class="chip" data-c="朗诵的声音处理">朗诵的声音处理</button><button type="button" class="chip" data-c="画面构图与意象">画面构图与意象</button><button type="button" class="chip" data-c="色彩 / 光影 / 色调">色彩 / 光影 / 色调</button><button type="button" class="chip" data-c="分镜的远近层次">分镜的远近层次</button><button type="button" class="chip" data-c="整体风格与配乐">整体风格与配乐</button><button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="其它">其它</button>
+      </div>
+      <div class="other-row" data-row="q2" style="display:none">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="">
+      </div>
+    </div>
+    <div class="sv-card" data-id="t_qing">
+      <div class="sv-head">
+        <span class="seal sm">情</span>
+        <div class="sv-tt"><h3>任务三 · 情｜月色里的"闲人"</h3><em>苏轼《记承天寺夜游》</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        <button type="button" class="chip" data-c="镜头雕琢">镜头雕琢</button><button type="button" class="chip" data-c="光影色调设定">光影色调设定</button><button type="button" class="chip" data-c="一切景语皆情语">一切景语皆情语</button><button type="button" class="chip" data-c="朗读符号标注">朗读符号标注</button><button type="button" class="chip" data-c="AI 朗读测评">AI 朗读测评</button>
+        <button type="button" class="chip" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:none">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        <button type="button" class="chip" data-c="朗诵的声音处理">朗诵的声音处理</button><button type="button" class="chip" data-c="画面构图与意象">画面构图与意象</button><button type="button" class="chip" data-c="色彩 / 光影 / 色调">色彩 / 光影 / 色调</button><button type="button" class="chip" data-c="分镜的远近层次">分镜的远近层次</button><button type="button" class="chip" data-c="整体风格与配乐">整体风格与配乐</button><button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="其它">其它</button>
+      </div>
+      <div class="other-row" data-row="q2" style="display:none">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="">
+      </div>
+    </div>
+    <div class="sv-card" data-id="t_jing2">
+      <div class="sv-head">
+        <span class="seal sm">境</span>
+        <div class="sv-tt"><h3>任务四 · 境｜把"境"界画出来</h3><em>《渡荆门送别》《黄鹤楼》</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        <button type="button" class="chip" data-c="远景与近景">远景与近景</button><button type="button" class="chip" data-c="层次开阖">层次开阖</button><button type="button" class="chip" data-c="时空交错">时空交错</button><button type="button" class="chip" data-c="分镜稿">分镜稿</button>
+        <button type="button" class="chip" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:none">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        <button type="button" class="chip" data-c="朗诵的声音处理">朗诵的声音处理</button><button type="button" class="chip" data-c="画面构图与意象">画面构图与意象</button><button type="button" class="chip" data-c="色彩 / 光影 / 色调">色彩 / 光影 / 色调</button><button type="button" class="chip" data-c="分镜的远近层次">分镜的远近层次</button><button type="button" class="chip" data-c="整体风格与配乐">整体风格与配乐</button><button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="其它">其它</button>
+      </div>
+      <div class="other-row" data-row="q2" style="display:none">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="">
+      </div>
+    </div>
+    <div class="sv-card" data-id="t_zhi">
+      <div class="sv-head">
+        <span class="seal sm">志</span>
+        <div class="sv-tt"><h3>任务五 · 志｜山水深处见心志</h3><em>《钱塘湖春行》《野望》《使至塞上》</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        <button type="button" class="chip" data-c="诗人心志档案">诗人心志档案</button><button type="button" class="chip" data-c="炼字换字比较">炼字换字比较</button><button type="button" class="chip" data-c="文化底蕴阐释">文化底蕴阐释</button><button type="button" class="chip" data-c="视觉风格定调">视觉风格定调</button><button type="button" class="chip" data-c="AI 生图提示语">AI 生图提示语</button>
+        <button type="button" class="chip" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:none">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        <button type="button" class="chip" data-c="朗诵的声音处理">朗诵的声音处理</button><button type="button" class="chip" data-c="画面构图与意象">画面构图与意象</button><button type="button" class="chip" data-c="色彩 / 光影 / 色调">色彩 / 光影 / 色调</button><button type="button" class="chip" data-c="分镜的远近层次">分镜的远近层次</button><button type="button" class="chip" data-c="整体风格与配乐">整体风格与配乐</button><button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="其它">其它</button>
+      </div>
+      <div class="other-row" data-row="q2" style="display:none">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="">
+      </div>
+    </div>
+    <div class="sv-card" data-id="t_zuo">
+      <div class="sv-head">
+        <span class="seal sm">做</span>
+        <div class="sv-tt"><h3>任务六 · 做｜从想法到成片</h3><em>六选一 ＋ AI 生图 / 录音 / 合成</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        <button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="分镜稿">分镜稿</button><button type="button" class="chip" data-c="录音要点">录音要点</button><button type="button" class="chip" data-c="导出参数">导出参数</button><button type="button" class="chip" data-c="选题理由">选题理由</button>
+        <button type="button" class="chip" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:none">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        <button type="button" class="chip" data-c="朗诵的声音处理">朗诵的声音处理</button><button type="button" class="chip" data-c="画面构图与意象">画面构图与意象</button><button type="button" class="chip" data-c="色彩 / 光影 / 色调">色彩 / 光影 / 色调</button><button type="button" class="chip" data-c="分镜的远近层次">分镜的远近层次</button><button type="button" class="chip" data-c="整体风格与配乐">整体风格与配乐</button><button type="button" class="chip" data-c="AI 提示词写法">AI 提示词写法</button><button type="button" class="chip" data-c="其它">其它</button>
+      </div>
+      <div class="other-row" data-row="q2" style="display:none">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="">
+      </div>
+    </div></div>
+
+    <div class="lb">
+      <h4>班级汇总</h4>
+      <div id="ansSummary"><p class="as-empty">完成选择后，这里汇总你的结果；连接班级码后实时汇总全班。</p></div>
+    </div>
+  </section>
+
+  <section id="sec-poll">
+    <div class="sec-head"><span class="sec-num serif">叁</span><h2>互评</h2></div>
+    <p class="sec-desc">对照思维量表：每部成片一张表，按维度<b>打星（1–5）</b>、逐维<b>点评</b>，表格末行自动算<b>总分</b>并显示<b>班级平均分</b>（与「贰」共用同一班级共享连接）。</p>
+    <p class="conn-line">班级共享状态：<b id="connEcho">未连接 · 仅本机</b></p>
+
+    <div id="rubricTables">
+    <div class="tbl-cap">
+      <span class="wk-tag">成片①</span>
+      <em>对照四维量规打分：点 ★（1–5，再点一次取消）· 每维写一句点评</em>
+      <span class="tbl-total" data-cap="w1">尚未评分</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="rub" data-w="w1">
+        <thead>
+          <tr>
+            <th style="width:12%">评价维度</th>
+            <th style="width:37%">量规标准（怎么评）</th>
+            <th style="width:19%">我的评分</th>
+            <th>我的点评</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr data-dim="朗诵表达">
+            <td class="d-name">朗诵表达</td>
+            <td class="d-std">字音准确；停连、重音贴合文本逻辑与写景手法；声情有自己的理解</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="朗诵表达" placeholder="一句话点评（朗诵表达）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="画面创作">
+            <td class="d-name">画面创作</td>
+            <td class="d-std">画面紧扣课文意象与内涵；构图、色彩、光影有审美美感</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="画面创作" placeholder="一句话点评（画面创作）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="技术参数">
+            <td class="d-name">技术参数</td>
+            <td class="d-std">MP4 · ≥1080P · 16:9 · ≤200MB；声画同步，字幕规范</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="技术参数" placeholder="一句话点评（技术参数）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="文化底蕴">
+            <td class="d-name">文化底蕴</td>
+            <td class="d-std">能说出作品的文化内涵，并有自己独特的解读与表达</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="文化底蕴" placeholder="一句话点评（文化底蕴）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr class="row-total">
+            <td colspan="2">我的总分（满分 20）</td>
+            <td class="d-score"><span class="num" data-role="mysum">0</span><span style="font-size:12px"> / 20</span></td>
+            <td style="font-size:12px;color:var(--soft)">四维打星自动相加</td>
+          </tr>
+          <tr class="row-avg">
+            <td colspan="2">班级平均分（实时）</td>
+            <td colspan="2" style="text-align:left"><span class="num" data-role="clsavg">—</span><span class="cnt" data-role="clscnt">（暂无评分）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tbl-cap">
+      <span class="wk-tag">成片②</span>
+      <em>对照四维量规打分：点 ★（1–5，再点一次取消）· 每维写一句点评</em>
+      <span class="tbl-total" data-cap="w2">尚未评分</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="rub" data-w="w2">
+        <thead>
+          <tr>
+            <th style="width:12%">评价维度</th>
+            <th style="width:37%">量规标准（怎么评）</th>
+            <th style="width:19%">我的评分</th>
+            <th>我的点评</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr data-dim="朗诵表达">
+            <td class="d-name">朗诵表达</td>
+            <td class="d-std">字音准确；停连、重音贴合文本逻辑与写景手法；声情有自己的理解</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="朗诵表达" placeholder="一句话点评（朗诵表达）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="画面创作">
+            <td class="d-name">画面创作</td>
+            <td class="d-std">画面紧扣课文意象与内涵；构图、色彩、光影有审美美感</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="画面创作" placeholder="一句话点评（画面创作）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="技术参数">
+            <td class="d-name">技术参数</td>
+            <td class="d-std">MP4 · ≥1080P · 16:9 · ≤200MB；声画同步，字幕规范</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="技术参数" placeholder="一句话点评（技术参数）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="文化底蕴">
+            <td class="d-name">文化底蕴</td>
+            <td class="d-std">能说出作品的文化内涵，并有自己独特的解读与表达</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="文化底蕴" placeholder="一句话点评（文化底蕴）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr class="row-total">
+            <td colspan="2">我的总分（满分 20）</td>
+            <td class="d-score"><span class="num" data-role="mysum">0</span><span style="font-size:12px"> / 20</span></td>
+            <td style="font-size:12px;color:var(--soft)">四维打星自动相加</td>
+          </tr>
+          <tr class="row-avg">
+            <td colspan="2">班级平均分（实时）</td>
+            <td colspan="2" style="text-align:left"><span class="num" data-role="clsavg">—</span><span class="cnt" data-role="clscnt">（暂无评分）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tbl-cap">
+      <span class="wk-tag">成片③</span>
+      <em>对照四维量规打分：点 ★（1–5，再点一次取消）· 每维写一句点评</em>
+      <span class="tbl-total" data-cap="w3">尚未评分</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="rub" data-w="w3">
+        <thead>
+          <tr>
+            <th style="width:12%">评价维度</th>
+            <th style="width:37%">量规标准（怎么评）</th>
+            <th style="width:19%">我的评分</th>
+            <th>我的点评</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr data-dim="朗诵表达">
+            <td class="d-name">朗诵表达</td>
+            <td class="d-std">字音准确；停连、重音贴合文本逻辑与写景手法；声情有自己的理解</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="朗诵表达" placeholder="一句话点评（朗诵表达）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="画面创作">
+            <td class="d-name">画面创作</td>
+            <td class="d-std">画面紧扣课文意象与内涵；构图、色彩、光影有审美美感</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="画面创作" placeholder="一句话点评（画面创作）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="技术参数">
+            <td class="d-name">技术参数</td>
+            <td class="d-std">MP4 · ≥1080P · 16:9 · ≤200MB；声画同步，字幕规范</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="技术参数" placeholder="一句话点评（技术参数）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="文化底蕴">
+            <td class="d-name">文化底蕴</td>
+            <td class="d-std">能说出作品的文化内涵，并有自己独特的解读与表达</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="文化底蕴" placeholder="一句话点评（文化底蕴）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr class="row-total">
+            <td colspan="2">我的总分（满分 20）</td>
+            <td class="d-score"><span class="num" data-role="mysum">0</span><span style="font-size:12px"> / 20</span></td>
+            <td style="font-size:12px;color:var(--soft)">四维打星自动相加</td>
+          </tr>
+          <tr class="row-avg">
+            <td colspan="2">班级平均分（实时）</td>
+            <td colspan="2" style="text-align:left"><span class="num" data-role="clsavg">—</span><span class="cnt" data-role="clscnt">（暂无评分）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tbl-cap">
+      <span class="wk-tag">成片④</span>
+      <em>对照四维量规打分：点 ★（1–5，再点一次取消）· 每维写一句点评</em>
+      <span class="tbl-total" data-cap="w4">尚未评分</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="rub" data-w="w4">
+        <thead>
+          <tr>
+            <th style="width:12%">评价维度</th>
+            <th style="width:37%">量规标准（怎么评）</th>
+            <th style="width:19%">我的评分</th>
+            <th>我的点评</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr data-dim="朗诵表达">
+            <td class="d-name">朗诵表达</td>
+            <td class="d-std">字音准确；停连、重音贴合文本逻辑与写景手法；声情有自己的理解</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="朗诵表达" placeholder="一句话点评（朗诵表达）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="画面创作">
+            <td class="d-name">画面创作</td>
+            <td class="d-std">画面紧扣课文意象与内涵；构图、色彩、光影有审美美感</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="画面创作" placeholder="一句话点评（画面创作）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="技术参数">
+            <td class="d-name">技术参数</td>
+            <td class="d-std">MP4 · ≥1080P · 16:9 · ≤200MB；声画同步，字幕规范</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="技术参数" placeholder="一句话点评（技术参数）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr data-dim="文化底蕴">
+            <td class="d-name">文化底蕴</td>
+            <td class="d-std">能说出作品的文化内涵，并有自己独特的解读与表达</td>
+            <td class="d-score">
+              <div class="rb-stars"><span class="rb-star" data-v="1">★</span><span class="rb-star" data-v="2">★</span><span class="rb-star" data-v="3">★</span><span class="rb-star" data-v="4">★</span><span class="rb-star" data-v="5">★</span></div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="文化底蕴" placeholder="一句话点评（文化底蕴）：哪里做到了？还差什么？" value=""></td>
+          </tr>
+          <tr class="row-total">
+            <td colspan="2">我的总分（满分 20）</td>
+            <td class="d-score"><span class="num" data-role="mysum">0</span><span style="font-size:12px"> / 20</span></td>
+            <td style="font-size:12px;color:var(--soft)">四维打星自动相加</td>
+          </tr>
+          <tr class="row-avg">
+            <td colspan="2">班级平均分（实时）</td>
+            <td colspan="2" style="text-align:left"><span class="num" data-role="clsavg">—</span><span class="cnt" data-role="clscnt">（暂无评分）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div></div>
+
+    <div class="lb">
+      <h4>班级平均分一览 · 四张量表汇总</h4>
+      <div id="lbChips" class="lb-chips"><span class="lb-chip none">成片① · 暂无评分</span><span class="lb-chip none">成片② · 暂无评分</span><span class="lb-chip none">成片③ · 暂无评分</span><span class="lb-chip none">成片④ · 暂无评分</span></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <b>部编版八年级语文上册 · 第三单元「山川之美」</b><br>
+  大概念指导下的单元整体教学设计 ｜ 任务七【悟】· 课堂开篇复盘工具
+</footer>
+
+<div id="toast"></div>
+
+<script>
+/* ================== 数据（改内容只改这里） ================== */
+const KEY='scfp2026_v6';
+const NUM_WORKS=4;
+const WK_NAMES=['成片①','成片②','成片③','成片④','成片⑤','成片⑥'];
+const WORKS=Array.from({length:Math.min(NUM_WORKS,6)},(_,i)=>({id:'w'+(i+1),name:WK_NAMES[i]}));
+const DIMS=['朗诵表达','画面创作','技术参数','文化底蕴'];
+const RUBRIC=[
+ {k:'朗诵表达', std:'字音准确；停连、重音贴合文本逻辑与写景手法；声情有自己的理解'},
+ {k:'画面创作', std:'画面紧扣课文意象与内涵；构图、色彩、光影有审美美感'},
+ {k:'技术参数', std:'MP4 · ≥1080P · 16:9 · ≤200MB；声画同步，字幕规范'},
+ {k:'文化底蕴', std:'能说出作品的文化内涵，并有自己独特的解读与表达'}
+];
+const USES=['朗诵的声音处理','画面构图与意象','色彩 / 光影 / 色调','分镜的远近层次','整体风格与配乐','AI 提示词写法','其它'];
+const TASKS=[
+{ id:'t_yan', seal:'言', no:'任务一', name:'声音里的《三峡》', short:'《三峡》',
+  works:'郦道元《三峡》（《水经注》）', teacher:'冯绮华 · 2 课时',
+  brief:'文言的地基：读懂手法，才能读出味道',
+  learned:[
+    '疏通文意、积累实词：阙、溯、湍、巘、属引……',
+    '写景手法：正面＋侧面烘托、视角变换（俯视仰视）、动静结合、感官运用',
+    '朗诵标注四符号：∕ 停顿、· 重音、～ 延长、（）轻读',
+    '手法与声音对应：山之高峻要"压、沉"，水之奔涌要读快，静处放慢放轻'],
+  chips:['停连与节奏','重音处理','延长与轻读','手法→声音对应','字音与句读']},
+{ id:'t_jing', seal:'景', no:'任务二', name:'山水入信 · 词画相生', short:'山水入信·词画相生',
+  works:'《答谢中书书》《与朱元思书》', teacher:'张秀丽 · 2 课时',
+  brief:'读出来的山水 → 画出来的山水 → 定调的山水',
+  learned:[
+    '寻言·辨骈韵：四六句式、对偶工整、声律和谐、辞藻凝练',
+    '赏景·选意象：列出意象清单，用"意象＋特点＋手法＋画面"四要素批注写景句',
+    '辨图·找不同：AI 图与原文比对，体会"画面必须忠实于文字"，防止以图代读',
+    '悟情·定色调：两信同在热爱自然、寄情山水；陶弘景归隐得意（明净温润·暖），吴均失意退隐（清冷峻拔·冷）'],
+  chips:['意象清单','四要素批注','写景手法','辨图找不同','画面定色调','骈文对偶']},
+{ id:'t_qing', seal:'情', no:'任务三', name:'月色里的"闲人"', short:'记承天寺夜游',
+  works:'苏轼《记承天寺夜游》', teacher:'苏婷 · 2 课时',
+  brief:'镜头雕琢 · 时空对话 · 声情共情——从"读懂文章"到"读懂文人"',
+  learned:[
+    '行文脉络：叙事—写景—抒情，85 字三层推进',
+    '镜头雕琢：精准对标原文字句，用镜头类型（全景/中景/近景）与光影色调（柔光/硬光、冷/暖）读懂"一切景语皆情语"',
+    '时空对话：访谈 AI 苏轼与张怀民，解码"闲人"三重内涵——清闲是处境，闲适是心境，闲愁是底色，旷达是格局',
+    '声情共情：用朗读符号（/ ∥ △ · ▲ ⌒）标注诵读，AI 五维测评后调整再读'],
+  chips:['镜头雕琢','光影色调设定','一切景语皆情语','朗读符号标注','AI 朗读测评']},
+{ id:'t_jing2', seal:'境', no:'任务四', name:'把"境"界画出来', short:'渡荆门·黄鹤楼',
+  works:'《渡荆门送别》《黄鹤楼》', teacher:'刘广江 · 1 课时',
+  brief:'空间导演训练营：看见空间 · 删字擂台 · 撰写分镜稿',
+  learned:[
+    '看见空间：两诗同写"远望"而境不同——李白壮阔（由窄而阔），崔颢苍茫（由阔而窄）',
+    '取景与层次：远／近／俯／仰、推展——"山随平野尽，江入大荒流"是镜头的推移',
+    '删字擂台：删"随""入"或改"江水向东流"，AI 生成两组图对比——动词撑起了空间',
+    '三层时空电梯：《黄鹤楼》"昔人→千载→日暮"，时间与远近交织，"境"承载情感',
+    '撰写分镜稿：不少于 4 个镜头、不少于 3 种景别，每个镜头写明"为什么这样拍"'],
+  chips:['远景与近景','层次开阖','时空交错','分镜稿']},
+{ id:'t_zhi', seal:'志', no:'任务五', name:'山水深处见心志', short:'唐诗三首',
+  works:'《钱塘湖春行》《野望》《使至塞上》', teacher:'滕蕾蕾 · 1 课时',
+  brief:'读诗识人 · 阐释定调——同写山水，情怀各异',
+  learned:[
+    '读诗路径：知人—明事—绘景—炼字—识人—论世，填写"诗人心志档案"',
+    '读诗识人：三诗对照诵读（春湖·秋原·大漠意境图），概括画面风格（明丽／萧瑟／苍茫），炼字换字比较见妙处',
+    '三种心志：王绩隐逸（孤独而主动）、王维旷达（开阔）、白居易闲适（欢悦）——"同写山水，情怀各异"',
+    '文化底蕴阐释（不少于 150 字）：定篇—知人—明事—绘景—炼字—识人—论世七步范式',
+    '视觉风格定调：风格（明丽/萧瑟/苍茫/清润/壮阔）＋景别＋色调＋光影，写出可直接发给 AI 的生图提示语母句'],
+  chips:['诗人心志档案','炼字换字比较','文化底蕴阐释','视觉风格定调','AI 生图提示语']},
+{ id:'t_zuo', seal:'做', no:'任务六', name:'从想法到成片', short:'选文＋AI 技术',
+  works:'六选一 ＋ AI 生图 / 录音 / 合成', teacher:'冯绮华 · 2-3 课时',
+  brief:'从想法到成片的技术流水线',
+  learned:[
+    '定选文：100 字选题理由——为什么是这一篇',
+    'AI 提示词写法与分镜稿',
+    '朗诵录音要点；音画合成与导出（MP4 · ≥1080P · 16:9 · ≤200MB）'],
+  chips:['AI 提示词写法','分镜稿','录音要点','导出参数','选题理由']}
+];
+const EXTRA_CARDS=[
+ {seal:'启', ghost:true, strong:'任务〇 · 入项｜发布真任务',
+  em:'「课本里的中国 · 山水篇」AI 创作短视频参展 ｜ 冯绮华 · 0.5 课时',
+  brief:'先知道"做什么、做到什么算好、什么时候交"',
+  learned:[
+   '发布真实任务：为六篇山水诗文之一制作"真人朗诵 + AI 画面"短视频，投稿人教社展示活动',
+   '解读评审四维：朗诵表达 · 画面创作 · 技术参数 · 文化底蕴',
+   '拆解完成作品的工作流，形成个人任务卡'],
+  now:false},
+ {seal:'悟', ghost:false, strong:'任务七 · 悟｜成片收官 + 反思复盘',
+  em:'对照量规互评 · 提炼《写景方法清单》 · 回归大概念 ｜ 李好好 · 1 课时',
+  brief:'把"做过"变成"带走"',
+  learned:[
+   '成片收官：对照四维量规互评，说出差距与修改意见',
+   '提炼可迁移的《写景方法清单》',
+   '回归大概念：以审美的眼光观照自然，以恰当的方法再现风景'],
+  now:true}
+];
+
+/* ================== 状态与存取 ================== */
+let S={ans:{},code:'',rubric:{scores:{},notes:{}}};
+(function(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){const o=JSON.parse(raw);S={...S,...o};
+      S.ans=o.ans||{};
+      S.rubric=(o.rubric&&o.rubric.scores)?o.rubric:{scores:{},notes:{}};
+      S.rubric.scores=S.rubric.scores||{};S.rubric.notes=S.rubric.notes||{};
+    }
+  }catch(e){}
+})();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const esc=s=>(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* ================== 顶栏导航 ================== */
+document.querySelectorAll('.topnav button[data-target]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const t=document.getElementById(btn.dataset.target);
+    if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+
+/* ================== 壹 · 回望 ================== */
+const recapWrap=document.getElementById('recapWrap');
+recapWrap.innerHTML='';
+function recapCard(c){
+  return `<article class="task-card${c.now?' now':''}">
+    <div class="task-head">
+      <span class="seal${c.ghost?' ghost':''}">${c.seal}</span>
+      <div class="th-txt">
+        <strong>${c.strong}${c.now?'<span class="tag-now">本课 · 我们在这里</span>':''}</strong>
+        <em>${c.em}</em>
+        <i>${c.brief}</i>
+      </div>
+    </div>
+    <div class="task-body">
+      <h4>这节课学了什么</h4>
+      <ul class="learned">${c.learned.map(x=>`<li>${x}</li>`).join('')}</ul>
+    </div>
+  </article>`;
+}
+recapWrap.insertAdjacentHTML('beforeend',recapCard(EXTRA_CARDS[0]));
+TASKS.forEach(t=>{
+  recapWrap.insertAdjacentHTML('beforeend',recapCard({
+    seal:t.seal,ghost:false,strong:`${t.no} · ${t.seal}｜${t.name}`,
+    em:`${t.works} ｜ ${t.teacher}`,brief:t.brief,learned:t.learned,now:false}));
+});
+recapWrap.insertAdjacentHTML('beforeend',recapCard(EXTRA_CARDS[1]));
+
+/* ================== 贰 · 迁移（选择题） ================== */
+const surveyList=document.getElementById('surveyList');
+surveyList.innerHTML='';
+TASKS.forEach(t=>{
+  if(!S.ans[t.id]) S.ans[t.id]={q1:[],q2:[],other:'',other2:''};
+  const st=S.ans[t.id];
+  const showOther1=(st.q1||[]).includes('其他')||((st.other||'').trim()!=='');
+  const showOther2=(st.q2||[]).includes('其它')||((st.other2||'').trim()!=='');
+  surveyList.insertAdjacentHTML('beforeend',`
+    <div class="sv-card" data-id="${t.id}">
+      <div class="sv-head">
+        <span class="seal sm">${t.seal}</span>
+        <div class="sv-tt"><h3>${t.no} · ${t.seal}｜${t.name}</h3><em>${t.works}</em></div>
+      </div>
+      <p class="q">🧳 学会的方法（多选）</p>
+      <div class="chips" data-q="q1">
+        ${t.chips.map(c=>`<button type="button" class="chip${st.q1.includes(c)?' on':''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}
+        <button type="button" class="chip${st.q1.includes('其他')?' on':''}" data-c="其他">其他</button>
+      </div>
+      <div class="other-row" data-row="q1" style="display:${showOther1?'flex':'none'}">
+        <label>其他方法：</label>
+        <input type="text" class="other-input" data-k="other" placeholder="请写下这节课你还学会的方法" value="${esc(st.other)}">
+      </div>
+      <p class="q">🔗 它用在了成片的哪里？（多选）</p>
+      <div class="chips" data-q="q2">
+        ${USES.map(u=>`<button type="button" class="chip${st.q2.includes(u)?' on':''}" data-c="${esc(u)}">${esc(u)}</button>`).join('')}
+      </div>
+      <div class="other-row" data-row="q2" style="display:${showOther2?'flex':'none'}">
+        <label>其它用途：</label>
+        <input type="text" class="other-input" data-k="other2" placeholder="请写下它在你成片中的其它用途" value="${esc(st.other2)}">
+      </div>
+    </div>`);
+});
+surveyList.addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  const wrap=c.closest('.chips'), q=wrap.dataset.q;
+  const id=c.closest('.sv-card').dataset.id, st=S.ans[id], v=c.dataset.c;
+  const i=st[q].indexOf(v);
+  if(i>-1){st[q].splice(i,1);c.classList.remove('on');}
+  else{st[q].push(v);c.classList.add('on');}
+  const tag=(q==='q1')?'其他':'其它';
+  if(v===tag){
+    const row=c.closest('.sv-card').querySelector(`.other-row[data-row="${q}"]`);
+    row.style.display=st[q].includes(tag)?'flex':'none';
+    if(st[q].includes(tag)) row.querySelector('input').focus();
+  }
+  save(); refreshNow(); publishAns();   /* 【修复】本地点击立即刷新 */
+});
+let otherTimer=null;
+surveyList.addEventListener('input',e=>{
+  if(!e.target.matches('.other-input')) return;
+  const id=e.target.closest('.sv-card').dataset.id;
+  S.ans[id][e.target.dataset.k]=e.target.value; save();
+  clearTimeout(otherTimer);
+  otherTimer=setTimeout(()=>{publishAns();refreshNow();},500);
+});
+
+/* 我的作答收集与广播 */
+function collectMyAns(){
+  const out={}; let any=false;
+  TASKS.forEach(t=>{
+    const st=S.ans[t.id]||{};
+    const q1=st.q1||[], q2=st.q2||[], ot=(st.other||'').trim(), ot2=(st.other2||'').trim();
+    if(q1.length||q2.length||ot||ot2){out[t.id]={q1,q2,other:st.other||'',other2:st.other2||''};any=true;}
+  });
+  return any?out:null;
+}
+function publishAns(){
+  if(!isConnected())return;
+  const a=collectMyAns();
+  if(a)publish({type:'ans',voter:VOTER,answers:a});
+}
+
+/* ================== 叁 · 互评量表 ================== */
+const tablesBox=document.getElementById('rubricTables');
+function workAgg(wid){
+  const list=[];
+  const mine=S.rubric.scores[wid]||{};
+  if(DIMS.some(d=>(mine[d]||0)>0)) list.push(mine);
+  const pr=allRates[wid]||{};
+  Object.values(pr).forEach(r=>{if(r&&r.scores&&DIMS.some(d=>(r.scores[d]||0)>0))list.push(r.scores);});
+  if(!list.length) return {dims:DIMS.map(()=>0),total:0,n:0};
+  const dims=DIMS.map(d=>{let s=0;list.forEach(r=>s+=(r[d]||0));return s/list.length;});
+  return {dims,total:dims.reduce((a,b)=>a+b,0),n:list.length};
+}
+function mySum(wid){
+  const sc=S.rubric.scores[wid]||{};
+  return DIMS.reduce((a,d)=>a+(sc[d]||0),0);
+}
+function renderTables(){
+  tablesBox.innerHTML='';
+  WORKS.forEach(w=>{
+    const my=S.rubric.scores[w.id]||{};
+    const myNotes=S.rubric.notes[w.id]||{};
+    tablesBox.insertAdjacentHTML('beforeend',`
+    <div class="tbl-cap">
+      <span class="wk-tag">${esc(w.name)}</span>
+      <em>对照四维量规打分：点 ★（1–5，再点一次取消）· 每维写一句点评</em>
+      <span class="tbl-total" data-cap="${w.id}">尚未评分</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="rub" data-w="${w.id}">
+        <thead>
+          <tr>
+            <th style="width:12%">评价维度</th>
+            <th style="width:37%">量规标准（怎么评）</th>
+            <th style="width:19%">我的评分</th>
+            <th>我的点评</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${RUBRIC.map(r=>`
+          <tr data-dim="${r.k}">
+            <td class="d-name">${r.k}</td>
+            <td class="d-std">${r.std}</td>
+            <td class="d-score">
+              <div class="rb-stars">${[1,2,3,4,5].map(v=>`<span class="rb-star${((my[r.k]||0)>=v)?' on':''}" data-v="${v}">★</span>`).join('')}</div>
+              <span class="wd-avg" data-role="avg">班级均分 —</span>
+            </td>
+            <td class="d-note"><input type="text" data-dim="${r.k}" placeholder="一句话点评（${r.k}）：哪里做到了？还差什么？" value="${esc(myNotes[r.k]||'')}"></td>
+          </tr>`).join('')}
+          <tr class="row-total">
+            <td colspan="2">我的总分（满分 20）</td>
+            <td class="d-score"><span class="num" data-role="mysum">0</span><span style="font-size:12px"> / 20</span></td>
+            <td style="font-size:12px;color:var(--soft)">四维打星自动相加</td>
+          </tr>
+          <tr class="row-avg">
+            <td colspan="2">班级平均分（实时）</td>
+            <td colspan="2" style="text-align:left"><span class="num" data-role="clsavg">—</span><span class="cnt" data-role="clscnt"></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`);
+  });
+  WORKS.forEach(w=>updateAggs(w.id));
+  updateBoard();
+}
+function updateAggs(wid){
+  const tbl=tablesBox.querySelector(`table.rub[data-w="${wid}"]`); if(!tbl)return;
+  const a=workAgg(wid);
+  tbl.querySelectorAll('tr[data-dim]').forEach(row=>{
+    const i=RUBRIC.findIndex(r=>r.k===row.dataset.dim);
+    row.querySelector('[data-role="avg"]').textContent=a.n?('班级均分 '+a.dims[i].toFixed(1)):'班级均分 —';
+  });
+  tbl.querySelector('[data-role="mysum"]').textContent=mySum(wid);
+  tbl.querySelector('[data-role="clsavg"]').textContent=a.n?a.total.toFixed(1)+' / 20':'—';
+  tbl.querySelector('[data-role="clscnt"]').textContent=a.n?('（'+a.n+' 人评分）'):'（暂无评分）';
+  const cap=document.querySelector(`.tbl-total[data-cap="${wid}"]`);
+  if(cap) cap.textContent=a.n?`班级均分 ${a.total.toFixed(1)} / 20 · ${a.n} 人评`:'尚未评分';
+}
+function updateBoard(){
+  const chips=WORKS.map(w=>{
+    const a=workAgg(w.id);
+    return a.n?`<span class="lb-chip">${esc(w.name)}<b>${a.total.toFixed(1)}</b>/20<small>${a.n} 人评</small></span>`
+              :`<span class="lb-chip none">${esc(w.name)} · 暂无评分</span>`;
+  }).join('');
+  document.getElementById('lbChips').innerHTML=chips||'<span class="lb-chip none">暂无数据</span>';
+}
+function publishRate(wid){
+  publish({type:'rate',voter:VOTER,work:wid,scores:S.rubric.scores[wid]||{},notes:S.rubric.notes[wid]||{}});
+}
+tablesBox.addEventListener('click',e=>{
+  const st=e.target.closest('.rb-star'); if(!st)return;
+  const tbl=st.closest('table.rub'), wid=tbl.dataset.w;
+  const dim=st.closest('tr').dataset.dim, v=+st.dataset.v;
+  const cur=(S.rubric.scores[wid]||{})[dim]||0;
+  const nv=(cur===v)?0:v;
+  S.rubric.scores[wid]=S.rubric.scores[wid]||{}; S.rubric.scores[wid][dim]=nv;
+  save(); publishRate(wid);
+  /* 【修复】本地点击立即点亮：不等去抖 */
+  tbl.querySelectorAll('tr[data-dim]').forEach(row=>{
+    const sc=(S.rubric.scores[wid]||{})[row.dataset.dim]||0;
+    row.querySelectorAll('.rb-star').forEach(s=>s.classList.toggle('on',+s.dataset.v<=sc));
+  });
+  refreshNow();
+});
+let noteTimer=null;
+tablesBox.addEventListener('input',e=>{
+  const n=e.target.closest('.d-note input'); if(!n)return;
+  const wid=n.closest('table.rub').dataset.w, dim=n.dataset.dim;
+  S.rubric.notes[wid]=S.rubric.notes[wid]||{};
+  S.rubric.notes[wid][dim]=n.value; save();
+  clearTimeout(noteTimer);
+  noteTimer=setTimeout(()=>publishRate(wid),500);
+});
+function collectMyRates(){
+  const out={}; let any=false;
+  WORKS.forEach(w=>{
+    const sc=S.rubric.scores[w.id]||{};
+    const nt=S.rubric.notes[w.id]||{};
+    const hasScore=DIMS.some(d=>(sc[d]||0)>0);
+    const hasNote=DIMS.some(d=>((nt[d]||'')+'').trim());
+    if(hasScore||hasNote){out[w.id]={scores:sc,notes:nt};any=true;}
+  });
+  return any?out:null;
+}
+
+/* ================== 班级码实时共享 ================== */
+/* ① 页面打开即预加载 MQTT 库 */
+(function preloadMqtt(){
+  if(typeof mqtt!=='undefined')return;
+  const s=document.createElement('script');
+  s.src='https://registry.npmmirror.com/mqtt/5.10.1/files/dist/mqtt.min.js';
+  s.onerror=()=>{const b=document.createElement('script');b.src='https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js';document.head.appendChild(b);};
+  document.head.appendChild(s);
+})();
+
+const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081'];
+const TOPIC_PREFIX='shanmei2026/live/';
+let mqttClient=null, curCode='', brokerIdx=0;
+const peerAns={};
+const allRates={};
+const VOTER=(function(){
+  let v='';try{v=localStorage.getItem(KEY+'#voter')}catch(e){}
+  if(!v){v='v'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    try{localStorage.setItem(KEY+'#voter',v)}catch(e){}}
+  return v;
+})();
+function isConnected(){return !!(mqttClient&&mqttClient.connected);}
+
+/* ③ 双通道刷新：refreshNow 立即（本地点击）；scheduleUiRefresh 去抖 200ms（网络消息） */
+let _uiTimer=null;
+function refreshNow(){
+  if(_uiTimer){clearTimeout(_uiTimer);_uiTimer=null;}
+  WORKS.forEach(w=>updateAggs(w.id));
+  updateBoard();
+  updateAnsAggs();
+}
+function scheduleUiRefresh(){
+  if(_uiTimer)return;
+  _uiTimer=setTimeout(()=>{
+    _uiTimer=null;
+    refreshNow();
+  },200);
+}
+
+function ansCount(taskId,q,opt){
+  let n=0;
+  if(((S.ans[taskId]||{})[q]||[]).includes(opt)) n++;   /* 【修复】我的选择永远计入 */
+  Object.values(peerAns).forEach(a=>{
+    if(a&&a[taskId]&&a[taskId][q]&&a[taskId][q].includes(opt)) n++;
+  });
+  return n;
+}
+function respondents(){
+  let n=Object.keys(peerAns).length;
+  if(collectMyAns())n++;
+  return n;
+}
+/* 【修复】汇总不再依赖连接状态：未连接显示"我的"，连接后并入全班 */
+function updateAnsAggs(){
+  const box=document.getElementById('ansSummary');
+  const hasAny=respondents()>0;
+  if(!hasAny){
+    box.innerHTML='<p class="as-empty">完成选择后，这里汇总你的结果；连接班级码后实时汇总全班。</p>';
+    return;
+  }
+  const connected=isConnected();
+  let html=`<p class="as-head">${connected?`本班已有 ${respondents()} 人作答`:'（未连接班级码 · 以下为我的作答，连接后自动并入全班汇总）'}</p>`;
+  TASKS.forEach(t=>{
+    const l1=[],l2=[];
+    [...TASKS.find(x=>x.id===t.id).chips,'其他'].forEach(opt=>{
+      const n=ansCount(t.id,'q1',opt); if(n>0)l1.push(`${opt}（${n}）`);
+    });
+    USES.forEach(opt=>{
+      const n=ansCount(t.id,'q2',opt); if(n>0)l2.push(`${opt}（${n}）`);
+    });
+    html+=`<div class="as-row"><b>${t.no} · ${t.seal}｜${t.name}</b>
+      <div><span class="lab">学会的方法：</span>${l1.length?l1.join('　'):'—'}</div>
+      <div><span class="lab">用在成片：</span>${l2.length?l2.join('　'):'—'}</div></div>`;
+  });
+  box.innerHTML=html;
+}
+
+function setConn(state,text){
+  const d=document.getElementById('connDot'),t=document.getElementById('connText');
+  d.className='dot'+(state==='on'?' on':state==='wait'?' wait':'');
+  t.textContent=text;
+  const e=document.getElementById('connEcho');
+  if(e)e.textContent=text;
+}
+function loadScript(src,cb){
+  const s=document.createElement('script');s.src=src;
+  s.onload=()=>cb(true);s.onerror=()=>cb(false);document.head.appendChild(s);
+}
+function ensureMqtt(){
+  return new Promise((res,rej)=>{
+    let n=0;
+    (function wait(){
+      if(typeof mqtt!=='undefined')return res();
+      if(++n>50)return rej(new Error('lib'));
+      setTimeout(wait,100);
+    })();
+  });
+}
+function publish(obj){
+  if(isConnected()){try{mqttClient.publish(TOPIC_PREFIX+curCode,JSON.stringify(obj));}catch(e){}}
+}
+function onMqttMsg(topic,payload){
+  let m;try{m=JSON.parse(payload.toString())}catch(e){return}
+  if(!m||m.voter===VOTER)return;
+  if(m.type==='ans'&&m.answers){
+    peerAns[m.voter]=m.answers;scheduleUiRefresh();
+  }else if(m.type==='sync-req'){
+    const a=collectMyAns(); if(a)publish({type:'ans',voter:VOTER,answers:a});
+    const mine=collectMyRates(); if(mine)publish({type:'rates',voter:VOTER,rates:mine});
+  }else if(m.type==='rate'&&m.work&&WORKS.some(w=>w.id===m.work)){
+    allRates[m.work]=allRates[m.work]||{};
+    allRates[m.work][m.voter]={scores:m.scores||{},notes:m.notes||{}};
+    scheduleUiRefresh();
+  }else if(m.type==='rates'&&m.rates){
+    Object.keys(m.rates).forEach(wid=>{
+      if(!WORKS.some(w=>w.id===wid))return;
+      allRates[wid]=allRates[wid]||{};
+      allRates[wid][m.voter]={scores:m.rates[wid].scores||{},notes:m.rates[wid].notes||{}};
+    });
+    scheduleUiRefresh();
+  }
+}
+function disconnectMqtt(){
+  try{if(mqttClient)mqttClient.end(true);}catch(e){}
+  mqttClient=null;
+  curCode='';
+  Object.keys(peerAns).forEach(k=>delete peerAns[k]);
+  Object.keys(allRates).forEach(k=>delete allRates[k]);
+  document.getElementById('btnConnect').textContent='班级共享';
+  setConn('','未连接 · 仅本机');
+  refreshNow();
+}
+async function connectCode(){
+  const code=document.getElementById('inCode').value.trim().toUpperCase();
+  if(!code){toast('请先输入班级码，如 A1');return;}
+  if(isConnected()&&curCode===code){toast('已连接该班级码');return;}
+  if(mqttClient&&!isConnected()){toast('正在连接中，请稍候…');return;}
+
+  curCode=code;S.code=code;save();
+  setConn('wait','连接中…');
+  try{await ensureMqtt();}
+  catch(e){setConn('','连接失败 · 仅本机');toast('实时组件加载失败，请检查网络');return;}
+  try{
+    mqttClient=mqtt.connect(BROKERS[brokerIdx],{
+      clientId:'scfp_'+VOTER+'_'+Math.random().toString(16).slice(2,6),
+      connectTimeout:15000,
+      reconnectPeriod:0,   /* 关闭自动重连循环：掉线不清数据，手动重连 */
+      keepalive:60,
+      clean:true
+    });
+  }catch(e){setConn('','连接失败 · 仅本机');return;}
+  mqttClient.on('connect',()=>{
+    setConn('on','已连接 · 实时共享中');
+    document.getElementById('btnConnect').textContent='断开';
+    try{mqttClient.subscribe(TOPIC_PREFIX+curCode,{qos:0});}catch(e){}
+    publish({type:'sync-req',voter:VOTER});
+    publishAns();
+    const mine=collectMyRates(); if(mine)publish({type:'rates',voter:VOTER,rates:mine});
+    refreshNow();
+  });
+  mqttClient.on('message',onMqttMsg);
+  mqttClient.on('close',()=>{
+    if(curCode){
+      setConn('','连接已断开 · 点"班级共享"重连');
+      document.getElementById('btnConnect').textContent='班级共享';
+    }
+  });
+  mqttClient.on('error',()=>{});
+}
+document.getElementById('btnConnect').addEventListener('click',()=>{
+  if(isConnected()){disconnectMqtt();toast('已断开，回到仅本机模式');}
+  else connectCode();
+});
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* 初始化 */
+if(S.code)document.getElementById('inCode').value=S.code;
+renderTables();refreshNow();
+</script>
+
+
+			
+		
+</body></html>
